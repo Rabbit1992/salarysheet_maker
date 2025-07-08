@@ -515,162 +515,473 @@ def save_salary_sheet_with_format(result_df, template_path):
 
 def main():
     st.set_page_config(
-        page_title="工资表生成系统",
+        page_title="智能工资表生成系统",
         page_icon="💰",
-        layout="wide"
+        layout="wide",
+        initial_sidebar_state="expanded"
     )
     
-    st.title("💰 工资表生成系统")
-    st.markdown("---")
+    # 自定义CSS样式
+    st.markdown("""
+    <style>
+    /* 主题色彩定义 */
+    :root {
+        --primary-color: #1f77b4;
+        --secondary-color: #ff7f0e;
+        --success-color: #2ca02c;
+        --warning-color: #ff9800;
+        --error-color: #d62728;
+        --background-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* 主标题样式 */
+    .main-title {
+        background: var(--background-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-size: 3rem;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 2rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* 卡片样式 */
+    .custom-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 15px;
+        box-shadow: var(--card-shadow);
+        border: 1px solid #e0e0e0;
+        margin-bottom: 1rem;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .custom-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+    }
+    
+    /* 状态指示器 */
+    .status-indicator {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin: 0.25rem;
+    }
+    
+    .status-success {
+        background: linear-gradient(135deg, #4CAF50, #45a049);
+        color: white;
+    }
+    
+    .status-warning {
+        background: linear-gradient(135deg, #FF9800, #f57c00);
+        color: white;
+    }
+    
+    .status-error {
+        background: linear-gradient(135deg, #f44336, #d32f2f);
+        color: white;
+    }
+    
+    /* 统计卡片 */
+    .metric-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 15px;
+        text-align: center;
+        box-shadow: var(--card-shadow);
+        margin-bottom: 1rem;
+    }
+    
+    .metric-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .metric-label {
+        font-size: 1rem;
+        opacity: 0.9;
+    }
+    
+    /* 按钮样式 */
+    .stButton > button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 25px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    }
+    
+    /* 文件上传区域 */
+    .uploadedFile {
+        border: 2px dashed #667eea;
+        border-radius: 15px;
+        padding: 1rem;
+        text-align: center;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    }
+    
+    /* 侧边栏样式 */
+    .css-1d391kg {
+        background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    
+    /* 数据表格样式 */
+    .stDataFrame {
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: var(--card-shadow);
+    }
+    
+    /* 进度条样式 */
+    .stProgress > div > div {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    /* 展开器样式 */
+    .streamlit-expanderHeader {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+        border-radius: 10px;
+        font-weight: 600;
+    }
+    
+    /* 分隔线样式 */
+    .custom-divider {
+        height: 3px;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 2px;
+        margin: 2rem 0;
+    }
+    
+    /* 功能介绍卡片 */
+    .feature-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border: 1px solid #f0f0f0;
+        transition: all 0.3s ease;
+        height: 100%;
+        margin-bottom: 1rem;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+        border-color: #667eea;
+    }
+    
+    .feature-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        display: block;
+    }
+    
+    .feature-card h4 {
+        color: #333;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+    
+    .feature-card p {
+        color: #666;
+        font-size: 0.9rem;
+        line-height: 1.4;
+        margin: 0;
+    }
+    
+    .feature-title {
+        color: #667eea;
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+        .main-title {
+            font-size: 2rem;
+        }
+        .metric-number {
+            font-size: 2rem;
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # 主标题
+    st.markdown('<h1 class="main-title">💰 智能工资表生成系统</h1>', unsafe_allow_html=True)
+    st.markdown('<hr class="custom-divider">', unsafe_allow_html=True)
     
     # 侧边栏
-    st.sidebar.header("📋 操作面板")
-    
-    # 加载工资表模板
-    st.sidebar.subheader("1. 工资表模板")
-    salary_template, template_path = load_salary_template()
-    
-    if salary_template is not None:
-        st.sidebar.success("✅ 工资表模板已加载")
-        st.sidebar.write(f"员工数量: {len(salary_template)}")
-    else:
-        st.sidebar.error("❌ 工资表模板加载失败")
-        st.stop()
-    
-    # 文件上传区域
-    st.sidebar.subheader("2. 上传数据文件")
-    
-    # 休假数据上传
-    leave_file = st.sidebar.file_uploader(
-        "上传休假表",
-        type=['xlsx', 'xls'],
-        key="leave_file",
-        help="请上传包含员工休假信息的Excel文件"
-    )
-    
-    # 加班数据上传
-    overtime_file = st.sidebar.file_uploader(
-        "上传加班表",
-        type=['xlsx', 'xls'],
-        key="overtime_file",
-        help="请上传包含员工加班信息的Excel文件"
-    )
+    with st.sidebar:
+        st.markdown("### 🎛️ 控制面板")
+        st.markdown("---")
+        
+        # 加载工资表模板
+        st.markdown("#### 📊 工资表模板")
+        salary_template, template_path = load_salary_template()
+        
+        if salary_template is not None:
+            st.markdown('<div class="status-indicator status-success">✅ 模板加载成功</div>', unsafe_allow_html=True)
+            st.markdown(f"**员工数量:** {len(salary_template)} 人")
+        else:
+            st.markdown('<div class="status-indicator status-error">❌ 模板加载失败</div>', unsafe_allow_html=True)
+            st.stop()
+        
+        st.markdown("---")
+        
+        # 文件上传区域
+        st.markdown("#### 📁 数据文件上传")
+        
+        # 休假数据上传
+        st.markdown("**🏖️ 休假表**")
+        leave_file = st.file_uploader(
+            "上传休假表",
+            type=['xlsx', 'xls'],
+            key="leave_file",
+            help="可选上传，包含员工休假信息的Excel文件"
+        )
+        
+        # 加班数据上传
+        st.markdown("**⏰ 加班表**")
+        overtime_file = st.file_uploader(
+            "上传加班表",
+            type=['xlsx', 'xls'],
+            key="overtime_file",
+            help="可选上传，包含员工加班信息的Excel文件"
+        )
     
     # 主内容区域
-    col1, col2 = st.columns([2, 1])
+    # 系统功能简介
+    st.markdown("""
+    <div class="custom-card" style="text-align: center; background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));">
+        <h4 style="color: #667eea; margin-bottom: 1rem;">💡 系统功能</h4>
+        <p style="margin-bottom: 0;">智能考勤判断 • 节假日识别 • 公式保护 • 详细备注</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # 使用说明
+    with st.expander("💡 使用说明", expanded=False):
+        st.markdown("""
+        **操作步骤：**
+        1. 系统自动加载工资表模板
+        2. 可选上传请假表和加班表
+        3. 点击生成工资表按钮
+        4. 下载生成的工资表文件
+        
+        **数据格式：**
+        - 请假表：姓名、请假类型、时长
+        - 加班表：姓名、加班日期、时长
+        """)
+    
+    st.markdown('<hr class="custom-divider">', unsafe_allow_html=True)
+    
+    # 数据状态
+    st.markdown("### 📊 数据状态")
+    
+    # 简化的统计信息
+    col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.header("📊 数据预览")
-        
-        # 显示工资表模板
-        with st.expander("工资表模板", expanded=True):
-            st.dataframe(salary_template, use_container_width=True)
+        st.metric("员工总数", len(salary_template))
     
     with col2:
-        st.header("📈 数据统计")
-        
-        # 显示基本统计信息
-        st.metric("员工总数", len(salary_template))
-        
-        if leave_file:
-            leave_data = load_leave_data(leave_file)
-            if leave_data is not None:
-                st.metric("休假记录数", len(leave_data))
-                with st.expander("休假数据预览"):
-                    st.dataframe(leave_data, use_container_width=True)
-        
-        if overtime_file:
-            overtime_data = load_overtime_data(overtime_file)
-            if overtime_data is not None:
-                st.metric("加班记录数", len(overtime_data))
-                with st.expander("加班数据预览"):
-                    st.dataframe(overtime_data, use_container_width=True)
+        leave_count = len(load_leave_data(leave_file)) if leave_file else 0
+        st.metric("请假记录", leave_count)
+    
+    with col3:
+        overtime_count = len(load_overtime_data(overtime_file)) if overtime_file else 0
+        st.metric("加班记录", overtime_count)
+    
+    # 数据预览（简化）
+    if leave_file or overtime_file:
+        with st.expander("📋 数据预览", expanded=False):
+            if leave_file:
+                st.write("**请假数据：**")
+                leave_preview = load_leave_data(leave_file)
+                if leave_preview is not None and not leave_preview.empty:
+                    st.dataframe(leave_preview.head(3), use_container_width=True)
+            
+            if overtime_file:
+                st.write("**加班数据：**")
+                overtime_preview = load_overtime_data(overtime_file)
+                if overtime_preview is not None and not overtime_preview.empty:
+                    st.dataframe(overtime_preview.head(3), use_container_width=True)
     
     # 生成工资表按钮
-    st.markdown("---")
+    st.markdown('<hr class="custom-divider">', unsafe_allow_html=True)
+    
+    # 生成按钮区域
+    st.markdown("### 🚀 生成工资表")
+    
+    # 检查是否可以生成
+    can_generate = salary_template is not None
+    
+    if can_generate:
+        st.markdown("""
+        <div class="custom-card" style="text-align: center; background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));">
+            <h4 style="color: #667eea; margin-bottom: 1rem;">🎯 准备就绪</h4>
+            <p style="margin-bottom: 1.5rem;">系统已准备好生成工资表，点击下方按钮开始处理</p>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div class="custom-card" style="text-align: center; background: linear-gradient(135deg, rgba(255, 152, 0, 0.05), rgba(255, 87, 34, 0.05));">
+            <h4 style="color: #ff9800; margin-bottom: 1rem;">⚠️ 请检查配置</h4>
+            <p style="margin-bottom: 1.5rem;">请确保工资表模板已正确加载</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
-        if st.button("🚀 生成工资表", type="primary", use_container_width=True):
-            with st.spinner("正在生成工资表..."):
-                # 加载数据
+        if st.button("🚀 开始生成工资表", type="primary", use_container_width=True, disabled=not can_generate):
+            # 创建进度条
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            try:
+                # 步骤1: 加载数据
+                status_text.text("📂 正在加载数据文件...")
+                progress_bar.progress(20)
+                
                 leave_data = load_leave_data(leave_file) if leave_file else None
                 overtime_data = load_overtime_data(overtime_file) if overtime_file else None
                 
-                # 合并数据
+                # 步骤2: 处理数据
+                status_text.text("⚙️ 正在处理员工数据...")
+                progress_bar.progress(50)
+                
                 final_salary_sheet = merge_to_salary_sheet(
                     salary_template, 
                     leave_data, 
                     overtime_data
                 )
                 
-                # 显示结果
-                st.success("✅ 工资表生成完成！")
+                # 步骤3: 生成Excel文件
+                status_text.text("📊 正在生成Excel文件...")
+                progress_bar.progress(80)
                 
-                # 显示最终工资表
-                st.header("📋 最终工资表")
-                st.dataframe(final_salary_sheet, use_container_width=True)
-                
-                # 提供下载功能 - 使用新的格式保留方法
                 excel_data = save_salary_sheet_with_format(final_salary_sheet, template_path)
                 
                 if excel_data is None:
-                    st.error("生成Excel文件失败，请检查模板格式")
+                    st.error("❌ 生成Excel文件失败，请检查模板格式")
                     st.stop()
                 
-                st.download_button(
-                    label="📥 下载工资表",
-                    data=excel_data,
-                    file_name=f"工资表_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
-                )
+                # 步骤4: 完成
+                status_text.text("✅ 工资表生成完成！")
+                progress_bar.progress(100)
+                
+                # 成功提示
+                st.balloons()
+                st.markdown("""
+                <div class="custom-card" style="text-align: center; background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(69, 160, 73, 0.1)); border: 2px solid #4CAF50;">
+                    <h3 style="color: #4CAF50; margin-bottom: 1rem;">🎉 生成成功！</h3>
+                    <p style="margin-bottom: 1rem;">工资表已成功生成，包含所有员工的考勤和加班信息</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # 显示最终工资表
+                st.markdown("### 📋 最终工资表预览")
+                
+                with st.expander("📊 查看完整工资表", expanded=True):
+                    st.dataframe(final_salary_sheet, use_container_width=True, height=500)
+                
+                # 下载按钮
+                st.markdown("### 📥 下载文件")
+                
+                col_download1, col_download2, col_download3 = st.columns([1, 2, 1])
+                with col_download2:
+                    st.download_button(
+                        label="📥 下载完整工资表",
+                        data=excel_data,
+                        file_name=f"工资表_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
+                    )
+                
+            except Exception as e:
+                st.error(f"❌ 生成过程中出现错误: {str(e)}")
+                progress_bar.empty()
+                status_text.empty()
     
-    # 页脚
-    st.markdown("---")
+    # 页脚信息
+    st.markdown('<hr class="custom-divider">', unsafe_allow_html=True)
     
     # 数据格式说明
-    with st.expander("📋 数据格式要求", expanded=False):
+    with st.expander("📝 数据格式说明", expanded=False):
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("请假表格式")
-            st.code("""
-必需列：
-创建人   | 请假类型 | 时长     | 审批结果
-张三     | 年假     | 1天      | 通过
-李四     | 事假     | 4小时    | 通过
-
-支持格式：
-- 时长：1天、8小时、1h、纯数字
-- 系统会自动过滤审批通过的记录
-            """, language="text")
-            
+            st.markdown("""
+            <div class="custom-card">
+                <h4 style="color: #667eea; margin-bottom: 1rem;">📋 请假数据格式</h4>
+                <ul style="margin-left: 1rem;">
+                    <li><strong>姓名：</strong>员工姓名</li>
+                    <li><strong>请假类型：</strong>事假、病假、年假等</li>
+                    <li><strong>请假时长：</strong>支持多种格式</li>
+                    <li style="margin-left: 1rem; color: #666;">• 1天、8小时、1.5天</li>
+                    <li style="margin-left: 1rem; color: #666;">• 0.5天、4小时等</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+        
         with col2:
-            st.subheader("加班表格式")
-            st.code("""
-必需列：
-创建人   | 时长     | 审批结果
-王五     | 2.5      | 通过
-赵六     | 8小时    | 通过
-
-支持格式：
-- 时长：纯数字、8小时、1天
-- 系统会自动过滤审批通过的记录
-            """, language="text")
-    
-    st.markdown(
-        """
-        <div style='text-align: center; color: #666;'>
-            <p>💡 使用说明：</p>
-            <p>1. 系统会自动加载工资表模板</p>
-            <p>2. 上传休假表和加班表（可选）</p>
-            <p>3. 点击生成工资表按钮</p>
-            <p>4. 下载生成的工资表文件</p>
+            st.markdown("""
+            <div class="custom-card">
+                <h4 style="color: #667eea; margin-bottom: 1rem;">⏰ 加班数据格式</h4>
+                <ul style="margin-left: 1rem;">
+                    <li><strong>姓名：</strong>员工姓名</li>
+                    <li><strong>加班日期：</strong>多种日期格式</li>
+                    <li style="margin-left: 1rem; color: #666;">• YYYY-MM-DD</li>
+                    <li style="margin-left: 1rem; color: #666;">• MM/DD/YYYY等</li>
+                    <li><strong>加班时长：</strong>2小时、1.5小时等</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("""
+        <div class="custom-card" style="background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 152, 0, 0.1)); border-left: 4px solid #ffc107;">
+            <h4 style="color: #ff9800; margin-bottom: 1rem;">⚠️ 重要提示</h4>
+            <ul style="margin-left: 1rem;">
+                <li>系统会自动识别法定节假日和休息日</li>
+                <li>请假会影响考勤情况和全勤工资计算</li>
+                <li>所有Excel公式会自动保留在生成的文件中</li>
+                <li>支持批量处理多个员工的考勤数据</li>
+            </ul>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+        """, unsafe_allow_html=True)
+    
+
+    
+    # 页脚
+    st.markdown('<hr class="custom-divider">', unsafe_allow_html=True)
+    st.markdown("""
+    <div style="text-align: center; padding: 1rem; color: #666;">
+        <p>💼 智能工资表生成系统 v2.0 | 智能考勤管理</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
