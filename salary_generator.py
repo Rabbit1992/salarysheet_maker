@@ -1,10 +1,114 @@
 import streamlit as st
 import pandas as pd
 import io
-from datetime import datetime
+from datetime import datetime, date
 import os
 from openpyxl import load_workbook
 from copy import copy
+import calendar
+
+def get_chinese_holidays_2024():
+    """获取2024年中国法定节假日列表"""
+    holidays = [
+        # 元旦
+        date(2024, 1, 1),
+        # 春节
+        date(2024, 2, 10), date(2024, 2, 11), date(2024, 2, 12), 
+        date(2024, 2, 13), date(2024, 2, 14), date(2024, 2, 15), date(2024, 2, 16), date(2024, 2, 17),
+        # 清明节
+        date(2024, 4, 4), date(2024, 4, 5), date(2024, 4, 6),
+        # 劳动节
+        date(2024, 5, 1), date(2024, 5, 2), date(2024, 5, 3), date(2024, 5, 4), date(2024, 5, 5),
+        # 端午节
+        date(2024, 6, 10),
+        # 中秋节
+        date(2024, 9, 15), date(2024, 9, 16), date(2024, 9, 17),
+        # 国庆节
+        date(2024, 10, 1), date(2024, 10, 2), date(2024, 10, 3), 
+        date(2024, 10, 4), date(2024, 10, 5), date(2024, 10, 6), date(2024, 10, 7)
+    ]
+    return holidays
+
+def get_chinese_holidays_2025():
+    """获取2025年中国法定节假日列表"""
+    holidays = [
+        # 元旦
+        date(2025, 1, 1),
+        # 春节
+        date(2025, 1, 28), date(2025, 1, 29), date(2025, 1, 30), 
+        date(2025, 1, 31), date(2025, 2, 1), date(2025, 2, 2), date(2025, 2, 3),
+        # 清明节
+        date(2025, 4, 5), date(2025, 4, 6), date(2025, 4, 7),
+        # 劳动节
+        date(2025, 5, 1), date(2025, 5, 2), date(2025, 5, 3), date(2025, 5, 4), date(2025, 5, 5),
+        # 端午节
+        date(2025, 5, 31), date(2025, 6, 1), date(2025, 6, 2),
+        # 中秋节
+        date(2025, 10, 6),
+        # 国庆节
+        date(2025, 10, 1), date(2025, 10, 2), date(2025, 10, 3), 
+        date(2025, 10, 4), date(2025, 10, 5), date(2025, 10, 7), date(2025, 10, 8)
+    ]
+    return holidays
+
+def is_holiday_or_weekend(date_obj):
+    """判断日期是否为法定节假日或周末"""
+    if not isinstance(date_obj, date):
+        return False, "工作日"
+    
+    # 获取对应年份的节假日
+    if date_obj.year == 2024:
+        holidays = get_chinese_holidays_2024()
+    elif date_obj.year == 2025:
+        holidays = get_chinese_holidays_2025()
+    else:
+        holidays = []
+    
+    # 判断是否为法定节假日
+    if date_obj in holidays:
+        return True, "法定节假日"
+    
+    # 判断是否为周末
+    if date_obj.weekday() >= 5:  # 5=周六, 6=周日
+        return True, "休息日"
+    
+    return False, "工作日"
+
+def parse_date_from_string(date_str):
+    """从字符串中解析日期"""
+    if pd.isna(date_str) or not date_str:
+        return None
+    
+    date_str = str(date_str).strip()
+    
+    # 尝试多种日期格式
+    date_formats = [
+        '%Y-%m-%d',
+        '%Y/%m/%d',
+        '%Y年%m月%d日',
+        '%m/%d/%Y',
+        '%d/%m/%Y',
+        '%Y-%m-%d %H:%M:%S',
+        '%Y/%m/%d %H:%M:%S'
+    ]
+    
+    for fmt in date_formats:
+        try:
+            parsed_date = datetime.strptime(date_str, fmt).date()
+            return parsed_date
+        except ValueError:
+            continue
+    
+    # 如果是pandas的Timestamp对象
+    try:
+        if hasattr(date_str, 'date'):
+            return date_str.date()
+        elif isinstance(date_str, datetime):
+            return date_str.date()
+    except:
+        pass
+    
+    return None
 
 def load_salary_template():
     """加载工资表模板"""
@@ -198,7 +302,7 @@ def process_leave_data(result_df, leave_data):
     return result_df
 
 def process_overtime_data(result_df, overtime_data):
-    """处理加班数据并更新到工资表现有列中"""
+    """处理加班数据并更新到工资表现有列中，根据日期类型填入不同列"""
     if overtime_data is not None:
         # 检查必要的列是否存在
         required_overtime_columns = ['创建人', '时长']
@@ -239,41 +343,100 @@ def process_overtime_data(result_df, overtime_data):
             employee_overtime = overtime_data[overtime_data['创建人'] == employee_name]
             
             if not employee_overtime.empty:
-                # 计算总加班时间
-                total_hours = employee_overtime['加班时间'].sum()
+                # 分类统计不同类型的加班时间
+                weekday_hours = 0  # 平日加班
+                weekend_hours = 0  # 休息日加班
+                holiday_hours = 0  # 法定节假日加班
                 
                 # 收集详细的加班记录
                 overtime_details = []
                 for _, overtime_row in employee_overtime.iterrows():
                     overtime_hours = overtime_row['加班时间']
-                    detail = f"{overtime_row['时长']}({overtime_hours}小时)"
                     
-                    # 如果有日期信息，添加到详情中
-                    if '开始时间' in overtime_row and pd.notna(overtime_row['开始时间']):
-                        detail = f"{overtime_row['开始时间']} {detail}"
-                    elif '日期' in overtime_row and pd.notna(overtime_row['日期']):
-                        detail = f"{overtime_row['日期']} {detail}"
+                    # 尝试解析加班日期
+                    overtime_date = None
+                    date_type = "工作日"  # 默认为工作日
+                    
+                    # 从多个可能的日期列中获取日期
+                    date_columns = ['开始时间', '日期', '加班日期', '申请日期']
+                    for col in date_columns:
+                        if col in overtime_row and pd.notna(overtime_row[col]):
+                            overtime_date = parse_date_from_string(overtime_row[col])
+                            if overtime_date:
+                                break
+                    
+                    # 判断日期类型并分类统计
+                    if overtime_date:
+                        is_special, date_type = is_holiday_or_weekend(overtime_date)
+                        if date_type == "法定节假日":
+                            holiday_hours += overtime_hours
+                        elif date_type == "休息日":
+                            weekend_hours += overtime_hours
+                        else:
+                            weekday_hours += overtime_hours
+                    else:
+                        # 如果无法解析日期，默认为平日加班
+                        weekday_hours += overtime_hours
+                    
+                    # 构建详细记录
+                    if overtime_date:
+                        detail = f"{overtime_date.strftime('%Y-%m-%d')}({date_type}) {overtime_row['时长']}({overtime_hours}小时)"
+                    else:
+                        detail = f"{overtime_row['时长']}({overtime_hours}小时)"
                     
                     overtime_details.append(detail)
                 
-                # 更新现有的加班相关列
-                if '平日累计时间' in result_df.columns:
+                # 更新不同类型的加班时间到对应列
+                if weekday_hours > 0 and '平日累计时间' in result_df.columns:
                     current_hours = result_df.at[index, '平日累计时间'] if pd.notna(result_df.at[index, '平日累计时间']) else 0
-                    result_df.at[index, '平日累计时间'] = float(current_hours) + total_hours
+                    result_df.at[index, '平日累计时间'] = float(current_hours) + weekday_hours
+                
+                if weekend_hours > 0 and '休息日累计时间' in result_df.columns:
+                    current_hours = result_df.at[index, '休息日累计时间'] if pd.notna(result_df.at[index, '休息日累计时间']) else 0
+                    result_df.at[index, '休息日累计时间'] = float(current_hours) + weekend_hours
+                
+                if holiday_hours > 0 and '法定节假日累计时间' in result_df.columns:
+                    current_hours = result_df.at[index, '法定节假日累计时间'] if pd.notna(result_df.at[index, '法定节假日累计时间']) else 0
+                    result_df.at[index, '法定节假日累计时间'] = float(current_hours) + holiday_hours
                 
                 # 在备注列中记录详细的加班信息，每条记录分行显示
                 if '备注' in result_df.columns:
                     current_note = str(result_df.at[index, '备注']) if pd.notna(result_df.at[index, '备注']) else ''
-                    # 使用换行符分隔每条加班记录
-                    overtime_note = f"加班共{total_hours}小时:\n" + "\n".join([f"• {detail}" for detail in overtime_details])
+                    
+                    # 构建加班统计信息
+                    total_hours = weekday_hours + weekend_hours + holiday_hours
+                    overtime_summary = []
+                    if weekday_hours > 0:
+                        overtime_summary.append(f"平日{weekday_hours}小时")
+                    if weekend_hours > 0:
+                        overtime_summary.append(f"休息日{weekend_hours}小时")
+                    if holiday_hours > 0:
+                        overtime_summary.append(f"法定节假日{holiday_hours}小时")
+                    
+                    summary_text = "、".join(overtime_summary)
+                    overtime_note = f"加班共{total_hours}小时({summary_text}):\n" + "\n".join([f"• {detail}" for detail in overtime_details])
+                    
                     if current_note and current_note != 'nan':
                         result_df.at[index, '备注'] = f"{current_note}\n{overtime_note}"
                     else:
                         result_df.at[index, '备注'] = overtime_note
         
-        # 统计有加班记录的员工数量
+        # 统计有加班记录的员工数量和日期解析情况
         employees_with_overtime = overtime_data['创建人'].nunique()
-        st.success(f"已处理 {employees_with_overtime} 名员工的加班数据，更新到现有列中")
+        
+        # 统计日期解析成功率
+        date_parsed_count = 0
+        for _, row in overtime_data.iterrows():
+            date_columns = ['开始时间', '日期', '加班日期', '申请日期']
+            for col in date_columns:
+                if col in row and pd.notna(row[col]):
+                    if parse_date_from_string(row[col]):
+                        date_parsed_count += 1
+                        break
+        
+        st.success(f"已处理 {employees_with_overtime} 名员工的加班数据，按日期类型分类填入对应列")
+        if date_parsed_count < len(overtime_data):
+            st.warning(f"有 {len(overtime_data) - date_parsed_count} 条记录无法解析日期，已按平日加班处理")
     
     return result_df
 
